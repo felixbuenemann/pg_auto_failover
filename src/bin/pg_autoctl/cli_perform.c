@@ -292,12 +292,28 @@ cli_perform_failover(int argc, char **argv)
 	}
 
 	/* process state changes notification until we have a new primary */
+	NodeState targetState = PRIMARY_STATE;
+
+	/* Check environment variable to optionally wait for WAIT_PRIMARY_STATE instead */
+	if (env_exists("PG_AUTOCTL_PERFORM_SWITCHOVER_WAIT_PRIMARY"))
+	{
+		char value[BUFSIZE] = { 0 };
+		if (get_env_copy("PG_AUTOCTL_PERFORM_SWITCHOVER_WAIT_PRIMARY", value, sizeof(value)))
+		{
+			if (strcmp(value, "true") == 0 || strcmp(value, "1") == 0)
+			{
+				targetState = WAIT_PRIMARY_STATE;
+				log_info("Waiting for WAIT_PRIMARY state instead of PRIMARY state");
+			}
+		}
+	}
+
 	if (!monitor_wait_until_some_node_reported_state(
 			&monitor,
 			config.formation,
 			config.groupId,
 			config.pgSetup.pgKind,
-			PRIMARY_STATE,
+			targetState,
 			config.listen_notifications_timeout))
 	{
 		log_error("Failed to wait until a new primary has been notified");
