@@ -741,6 +741,24 @@ pg_add_auto_failover_default_settings(PostgresSetup *pgSetup,
 	char pgAutoFailoverDefaultsConfigPath[MAXPGPATH];
 
 	/*
+	 * Check if the user wants to disable automatic tuning via the
+	 * PG_AUTOCTL_TUNING environment variable. If set to "false",
+	 * disable the automatic tuning behavior.
+	 */
+	if (env_exists("PG_AUTOCTL_TUNING"))
+	{
+		char tuningValue[BUFSIZE];
+		if (get_env_copy("PG_AUTOCTL_TUNING", tuningValue, BUFSIZE))
+		{
+			if (strcmp(tuningValue, "false") == 0)
+			{
+				includeTuning = false;
+				log_info("Automatic tuning disabled by PG_AUTOCTL_TUNING=false");
+			}
+		}
+	}
+
+	/*
 	 * Write the default settings to postgresql-auto-failover.conf.
 	 *
 	 * postgresql-auto-failover.conf needs to be placed alongside
